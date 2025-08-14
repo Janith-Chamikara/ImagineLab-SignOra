@@ -9,8 +9,6 @@ REFRESH_TOKEN_SECRET=45ac78fa5c459c2c456a7390b26a8c0b
 ACCESS_TOKEN_SECRET=45ac78fa5c459c2c456a7390b26a8c0b
 REFRESH_TOKEN_VALIDITY_DURATION_IN_SEC=432000
 NODE_ENV=development
-POLICY_ID=08323bc27047645154898625f5aec2e95b04332af582ff59d74172f4
-OWNER_PUB_KEY_HASH=636dab9ca312330eec5dd996e06bccb1ce4c3a8d113448a8c774fcd44a6352cc3e641cb26e1413c9dbee36adeee59aee949de087ad343db776f9dd9b3bbe3f00
 ```
 
 ## To run in localhost
@@ -22,6 +20,125 @@ npm run seed
 
 npm run start:dev
 ```
+
+## Flow
+
+#### **1. User Registration and Account Setup**
+
+- **Janith** creates an account on the system by providing his personal details (e.g., email, national ID, name, date of birth, etc.).
+  - **User model**:
+    - `email: janith@example.com`
+    - `nationalId: 987654321V`
+    - `firstName: Janith`
+    - `lastName: Chamikara`
+    - `dateOfBirth: 1990-05-15`
+    - `isVerified: true`
+
+#### **2. Department Setup**
+
+- Janith is seeking a passport through the **Department of Immigration and Emigration**.
+  - **Department model**:
+    - `name: Department of Immigration and Emigration`
+    - `code: 101`
+    - `workingHours: {"monday": "9am-5pm", "tuesday": "9am-5pm", ...}`
+
+#### **3. Service Selection**
+
+- Janith selects the **passport service** for his application.
+  - **Service model**:
+    - `name: Passport Application`
+    - `description: Apply for a new passport`
+    - `fee: 3000 LKR`
+    - `estimatedTime: 60 minutes`
+    - `requiredDocuments: ["NATIONAL_ID", "BIRTH_CERTIFICATE", "UTILITY_BILL"]`
+
+#### **4. Time Slot Selection**
+
+- Janith views available time slots and books one for **2025-08-20 at 9:00 AM**.
+  - **TimeSlot model**:
+    - `date: 2025-08-20`
+    - `startTime: 9:00 AM`
+    - `endTime: 10:00 AM`
+    - `maxBookings: 5`
+    - `currentBookings: 2`
+
+#### **5. Appointment Booking**
+
+- Janith successfully books his appointment for the passport application.
+  - **Appointment model**:
+    - `bookingReference: A123456789`
+    - `qrCode: "QRCodeImageData"`
+    - `status: CONFIRMED`
+    - `service: Passport Application`
+    - `appointmentDate: 2025-08-20 09:00 AM`
+
+#### **6. Document Upload**
+
+- Janith uploads his required documents (National ID and Birth Certificate) for the passport application.
+  - **Document model**:
+    - `documentType: NATIONAL_ID`
+    - `filePath: "/uploads/id/987654321V.jpg"`
+    - `status: PENDING`
+
+#### **7. Officer Assignment (Automatic)**
+
+- **Automatic Assignment**:
+  - The system checks which officers are available at **2025-08-20, 09:00 AM** in the **Department of Immigration and Emigration**.
+  - It finds **Officer Anjali** available and with a manageable workload (e.g., fewer appointments).
+  - **Officer Anjali** is automatically assigned to **Janith's appointment** for processing.
+
+- **Notification to Officer**:
+  - **Officer Anjali** receives a notification about the assigned appointment:
+    _"You have been assigned to the passport application for Janith Chamikara on 2025-08-20 at 9:00 AM."_
+
+#### **8. Officer Processing Documents**
+
+- **Officer Anjali** reviews the documents uploaded by **Janith** (National ID and Birth Certificate) to verify their authenticity and completeness.
+  - **Document model** (after officer review):
+    - `status: APPROVED`
+    - `processedBy: Officer Anjali`
+
+#### **9. Notification to User**
+
+- **Janith** receives a notification about the document approval and appointment confirmation.
+  - **Notification model** (SMS):
+    - `type: DOCUMENT_STATUS`
+    - `channel: SMS`
+    - `message: "Your documents for the passport application have been approved. Your appointment is confirmed for 2025-08-20 at 9:00 AM."`
+
+#### **10. Appointment Completed**
+
+- On **2025-08-20**, **Janith** attends his appointment for the passport. **Officer Anjali** completes the required processing, and the passport is issued.
+
+#### **11. Feedback Request**
+
+- After the appointment is completed, **Janith** is prompted to provide feedback on his experience.
+  - **Feedback model**:
+    - `appointmentId: A123456789`
+    - `rating: 4`
+    - `comment: "Good service, but I had to wait for an hour."`
+
+#### **12. Analytics and Reporting**
+
+- The **Department of Immigration and Emigration** tracks the appointment data for reporting purposes, including the total number of passport applications, completed applications, and feedback received.
+  - **Analytics model**:
+    - `totalBookings: 100`
+    - `completedBookings: 90`
+    - `noShowRate: 10%`
+
+#### **13. Audit Logs**
+
+- Every action taken by **Officer Anjali** is logged for auditing and compliance purposes, ensuring transparency and security.
+  - **AuditLog model**:
+    - `action: "APPROVED DOCUMENT"`
+    - `entityType: "Document"`
+    - `entityId: "987654321V"`
+    - `officerId: "OfficerAnjali"`
+    - `timestamp: "2025-08-19 10:15 AM"`
+
+---
+
+### **Summary of Officer Assignment Process**:
 
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
