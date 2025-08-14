@@ -1,0 +1,290 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  nationalId  String   @unique
+  dateOfBirth DateTime
+  address     String?
+  city        String?
+  province    String?
+  postalCode  String?
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  appointments  Appointment[]
+  documents     Document[]
+  notifications Notification[]
+  feedbacks     Feedback[]
+}
+
+// Government Officer/Admin Management
+model Officer {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  password     String
+  firstName    String
+  lastName     String
+  employeeId   String      @unique
+  role         OfficerRole @default(OFFICER)
+  departmentId String
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relationships
+  department          Department     @relation(fields: [departmentId], references: [id])
+  managedAppointments Appointment[]  @relation("OfficerAppointments")
+  sentNotifications   Notification[]
+  processedDocuments  Document[]     @relation("ProcessedByOfficer")
+}
+
+enum OfficerRole {
+  ADMIN
+  MANAGER
+  OFFICER
+}
+
+// Government Departments
+model Department {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  code         String   @unique
+  description  String?
+  address      String?
+  phoneNumber  String?
+  email        String?
+  workingHours Json? // Flexible JSON structure for working hours
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationships
+  services  Service[]
+  officers  Officer[]
+  timeSlots TimeSlot[]
+}
+
+// Government Services
+model Service {
+  id                String   @id @default(uuid())
+  name              String
+  code              String   @unique
+  description       String
+  departmentId      String
+  estimatedTime     Int // in minutes
+  requiredDocuments Json? // Array of required document types
+  fee               Float    @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  department   Department    @relation(fields: [departmentId], references: [id])
+  appointments Appointment[]
+}
+
+// Available Time Slots
+model TimeSlot {
+  id              String         @id @default(uuid())
+  departmentId    String
+  date            DateTime
+  startTime       DateTime
+  endTime         DateTime
+  maxBookings     Int            @default(1)
+  currentBookings Int            @default(0)
+  status          TimeSlotStatus @default(AVAILABLE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relationships
+  department   Department    @relation(fields: [departmentId], references: [id])
+  appointments Appointment[]
+
+  @@unique([departmentId, date, startTime])
+}
+
+enum TimeSlotStatus {
+  AVAILABLE
+  FULL
+  BLOCKED
+  HOLIDAY
+}
+
+// Appointment Booking System
+model Appointment {
+  id                 String            @id @default(uuid())
+  bookingReference   String            @unique
+  qrCode             String            @unique
+  userId             String
+  serviceId          String
+  timeSlotId         String
+  officerId          String?
+  status             AppointmentStatus @default(PENDING)
+  notes              String?
+  checklistCompleted Json? // Checklist of required documents
+  appointmentDate    DateTime
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  completedAt        DateTime?
+
+  // Relationships
+  user      User       @relation(fields: [userId], references: [id])
+  service   Service    @relation(fields: [serviceId], references: [id])
+  timeSlot  TimeSlot   @relation(fields: [timeSlotId], references: [id])
+  officer   Officer?   @relation("OfficerAppointments", fields: [officerId], references: [id])
+  documents Document[]
+  feedback  Feedback?
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// Document Management
+model Document {
+  id            String         @id @default(uuid())
+  fileName      String
+  originalName  String
+  fileSize      Int
+  mimeType      String
+  filePath      String
+  documentType  DocumentType
+  userId        String
+  appointmentId String?
+  uploadedAt    DateTime       @default(now())
+  processedAt   DateTime?
+  processedById String?
+  status        DocumentStatus @default(PENDING)
+  notes         String?
+
+  // Relationships
+  user        User         @relation(fields: [userId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  processedBy Officer?     @relation("ProcessedByOfficer", fields: [processedById], references: [id])
+}
+
+enum DocumentType {
+  NATIONAL_ID
+  BIRTH_CERTIFICATE
+  MARRIAGE_CERTIFICATE
+  PASSPORT
+  UTILITY_BILL
+  BANK_STATEMENT
+  EMPLOYMENT_LETTER
+  MEDICAL_CERTIFICATE
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_CLARIFICATION
+}
+
+// Notification System
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  officerId String?
+  title     String
+  message   String
+  type      NotificationType
+  channel   NotificationChannel
+  isRead    Boolean             @default(false)
+  createdAt DateTime            @default(now())
+
+  // Relationships
+  user    User     @relation(fields: [userId], references: [id])
+  officer Officer? @relation(fields: [officerId], references: [id])
+}
+
+enum NotificationType {
+  APPOINTMENT_CONFIRMATION
+  APPOINTMENT_REMINDER
+  APPOINTMENT_UPDATE
+  DOCUMENT_STATUS
+  SYSTEM_ALERT
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  IN_APP
+}
+
+// Feedback System
+model Feedback {
+  id            String   @id @default(uuid())
+  userId        String
+  appointmentId String   @unique
+  rating        Int // 1-5 star rating
+  comment       String?
+  isAnonymous   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  // Relationships
+  user        User        @relation(fields: [userId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+// Analytics and Reporting
+model Analytics {
+  id                String   @id @default(uuid())
+  date              DateTime @default(now())
+  departmentId      String?
+  serviceId         String?
+  totalBookings     Int      @default(0)
+  completedBookings Int      @default(0)
+  cancelledBookings Int      @default(0)
+  avgProcessingTime Float? // in minutes
+  peakHours         Json? // Array of peak booking hours
+  noShowRate        Float    @default(0)
+  createdAt         DateTime @default(now())
+
+  @@unique([date, departmentId, serviceId])
+}
+
+// System Configuration
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+// Audit Log for Security and Compliance
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  officerId  String?
+  action     String
+  entityType String
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+}
