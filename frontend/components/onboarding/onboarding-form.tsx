@@ -15,6 +15,15 @@ import {
 } from "@/components/ui/select";
 import { onboardingSchema, type OnboardingFormData } from "@/lib/schema";
 import { useRouter } from "next/navigation";
+import { Popover, PopoverTrigger } from "../ui/popover";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
+import { PopoverContent } from "@radix-ui/react-popover";
+import { Calendar } from "../ui/calendar";
+import { format } from "date-fns";
+import { completeOnboarding } from "@/lib/actions";
+import { signIn, useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 const gnDivisions = [
   "Hingunugamuwa",
@@ -43,37 +52,35 @@ const divisionalSecretariats = [
 ];
 
 export function OnboardingForm() {
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema),
-    defaultValues: {
-      fullName: "Janith Chamikara",
-      birthday: "2000/02/03",
-      address: "No 10/1, Galle, Sri Lanka",
-      gnDivision: "Hingunugamuwa",
-      divisionalSecretariat: "Badulla",
-      contactNumber: "+94-760299855",
-      email: "janithchamikara13@gmail.com",
-    },
   });
 
+  const { data: session, update } = useSession();
   const onSubmit = async (data: OnboardingFormData) => {
-    setIsLoading(true);
-    try {
-      // Handle onboarding completion logic here
-      console.log("Onboarding data:", data);
-      // Redirect to dashboard after successful onboarding
-      router.push("/dashboard");
-    } catch (error) {
-      console.error("Onboarding error:", error);
-    } finally {
-      setIsLoading(false);
+    if (!session) {
+      toast.error("Cannot find your id");
+      return;
+    }
+    const response = await completeOnboarding(session?.user.id, {
+      ...data,
+      dateOfBirth: data.dateOfBirth.toISOString(),
+    });
+    if (response) {
+      if (response.status === "success") {
+        toast.success(response.message);
+
+        localStorage.setItem("isOnboardingCompleted", "TRUE");
+        router.push("/login");
+      } else {
+        toast.error(response.message);
+      }
     }
   };
 
@@ -84,35 +91,71 @@ export function OnboardingForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="fullName">Full Name</Label>
+        <Label htmlFor="fullName">First Name</Label>
         <Controller
-          name="fullName"
+          name="firstName"
           control={control}
           render={({ field }) => (
             <Input {...field} id="fullName" className="h-12" />
           )}
         />
-        {errors.fullName && (
-          <p className="text-sm text-red-600">{errors.fullName.message}</p>
+        {errors.firstName && (
+          <p className="text-sm text-red-600">{errors.firstName.message}</p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="lastName">Last Name</Label>
+        <Controller
+          name="lastName"
+          control={control}
+          render={({ field }) => (
+            <Input {...field} id="fullName" className="h-12" />
+          )}
+        />
+        {errors.lastName && (
+          <p className="text-sm text-red-600">{errors.lastName.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="birthday">Birthday</Label>
         <Controller
-          name="birthday"
+          name="dateOfBirth"
           control={control}
           render={({ field }) => (
-            <Input
-              {...field}
-              id="birthday"
-              placeholder="YYYY/MM/DD"
-              className="h-12"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-[240px] pl-3 text-left font-normal",
+                    !field.value && "text-muted-foreground"
+                  )}
+                >
+                  {field.value ? (
+                    format(field.value, "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={field.value}
+                  onSelect={field.onChange}
+                  disabled={(date) =>
+                    date > new Date() || date < new Date("1900-01-01")
+                  }
+                  captionLayout="dropdown"
+                />
+              </PopoverContent>
+            </Popover>
           )}
         />
-        {errors.birthday && (
-          <p className="text-sm text-red-600">{errors.birthday.message}</p>
+        {errors.dateOfBirth && (
+          <p className="text-sm text-red-600">{errors.dateOfBirth.message}</p>
         )}
       </div>
 
@@ -189,28 +232,28 @@ export function OnboardingForm() {
       <div className="space-y-2">
         <Label htmlFor="contactNumber">Contact number</Label>
         <Controller
-          name="contactNumber"
+          name="phoneNumber"
           control={control}
           render={({ field }) => (
             <Input {...field} id="contactNumber" className="h-12" />
           )}
         />
-        {errors.contactNumber && (
-          <p className="text-sm text-red-600">{errors.contactNumber.message}</p>
+        {errors.phoneNumber && (
+          <p className="text-sm text-red-600">{errors.phoneNumber.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">National Id Number</Label>
         <Controller
-          name="email"
+          name="nationalId"
           control={control}
           render={({ field }) => (
-            <Input {...field} id="email" type="email" className="h-12" />
+            <Input {...field} id="email" type="text" className="h-12" />
           )}
         />
-        {errors.email && (
-          <p className="text-sm text-red-600">{errors.email.message}</p>
+        {errors.nationalId && (
+          <p className="text-sm text-red-600">{errors.nationalId.message}</p>
         )}
       </div>
 
@@ -226,9 +269,9 @@ export function OnboardingForm() {
         <Button
           type="submit"
           className="h-12 flex-1 bg-black text-white hover:bg-gray-800"
-          disabled={isLoading}
+          disabled={isSubmitting}
         >
-          {isLoading ? "Processing..." : "Continue"}
+          {isSubmitting ? "Processing..." : "Continue"}
         </Button>
       </div>
     </form>

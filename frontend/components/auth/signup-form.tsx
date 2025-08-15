@@ -1,61 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, Controller, FieldValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerSchema, type RegisterFormData } from "@/lib/schema";
 import { Apple, Mail } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signUpAction } from "@/lib/actions";
+import { toast } from "sonner";
+import { signIn } from "next-auth/react";
 
 export function SignupForm() {
-  const [isLoading, setIsLoading] = useState(false);
-
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      nic: "",
+      email: "",
       password: "",
     },
   });
 
+  const router = useRouter();
+  useEffect(() => {
+    const isOnboardingCompleted = localStorage.getItem("isOnboardingCompleted");
+    const isSignUpCompleted = localStorage.getItem("isSignUpCompleted");
+    if (isSignUpCompleted === "TRUE" && isOnboardingCompleted === "FALSE") {
+      router.push("/onboarding");
+    }
+  }, []);
   const onSubmit = async (data: RegisterFormData) => {
-    setIsLoading(true);
-    try {
-      // Handle signup logic here
-      console.log("Signup data:", data);
-      // Redirect to onboarding after successful signup
-      window.location.href = "/onboarding";
-    } catch (error) {
-      console.error("Signup error:", error);
-    } finally {
-      setIsLoading(false);
+    const response = await signUpAction({
+      email: data.email,
+      password: data.password,
+    });
+    if (response) {
+      if (response.status === "success") {
+        toast.success(response.message);
+        await signIn("credentials", {
+          redirect: false,
+          email: data.email,
+          password: data.password,
+        });
+        localStorage.setItem("isSignUpCompleted", "TRUE");
+        localStorage.setItem("isOnboardingCompleted", "FALSE");
+        router.push("/onboarding");
+      } else {
+        toast.error(response.message);
+      }
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="nic">NIC</Label>
+        <Label htmlFor="nic">Email</Label>
         <Controller
-          name="nic"
+          name="email"
           control={control}
           render={({ field }) => (
             <Input
               {...field}
-              id="nic"
-              placeholder="200225702623"
+              id="email"
+              placeholder="example@gmail.com"
               className="h-12"
             />
           )}
         />
-        {errors.nic && (
-          <p className="text-sm text-red-600">{errors.nic.message}</p>
+        {errors.email && (
+          <p className="text-sm text-red-600">{errors.email.message}</p>
         )}
       </div>
 
@@ -65,20 +84,47 @@ export function SignupForm() {
           name="password"
           control={control}
           render={({ field }) => (
-            <Input {...field} id="password" type="password" className="h-12" />
+            <Input
+              {...field}
+              id="password"
+              placeholder="XXXXXX"
+              type="password"
+              className="h-12"
+            />
           )}
         />
         {errors.password && (
           <p className="text-sm text-red-600">{errors.password.message}</p>
         )}
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Confirm Password</Label>
+        <Controller
+          name="confirmPassword"
+          control={control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              id="confirmPassword"
+              type="password"
+              placeholder="XXXXXX"
+              className="h-12"
+            />
+          )}
+        />
+        {errors.confirmPassword && (
+          <p className="text-sm text-red-600">
+            {errors.confirmPassword.message}
+          </p>
+        )}
+      </div>
 
       <Button
         type="submit"
         className="w-full h-12 bg-black text-white hover:bg-gray-800"
-        disabled={isLoading}
+        disabled={isSubmitting}
       >
-        {isLoading ? "Creating account..." : "Register"}
+        {isSubmitting ? "Creating account..." : "Register"}
       </Button>
 
       <div className="relative">
@@ -122,9 +168,12 @@ export function SignupForm() {
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-600">
           Already have an account?{" "}
-          <a href="/login" className="text-black font-medium hover:underline">
+          <Link
+            href="/login"
+            className="text-black font-medium hover:underline"
+          >
             Sign in
-          </a>
+          </Link>
         </p>
       </div>
     </form>
