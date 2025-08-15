@@ -9,54 +9,58 @@ import { Label } from "@/components/ui/label";
 import { loginSchema, type LoginFormData } from "@/lib/schema";
 import { Apple, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false);
-
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      nic: "",
+      email: "",
       password: "",
     },
   });
 
+  const router = useRouter();
   const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    try {
-      toast.success("Hello user");
-      // Handle login logic here
-      console.log("Login data:", data);
-      // Redirect to dashboard after successful login
-    } catch (error) {
-      console.error("Login error:", error);
-    } finally {
-      setIsLoading(false);
+    const result = await signIn("credentials", {
+      redirect: false,
+      email: data.email,
+      password: data.password,
+    });
+    if (!result?.ok) {
+      toast.error("Invalid email or password");
+      return;
+    } else if (result?.ok) {
+      toast.success("Login successful");
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1000);
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="nic">NIC</Label>
+        <Label htmlFor="nic">Email</Label>
         <Controller
-          name="nic"
+          name="email"
           control={control}
           render={({ field }) => (
             <Input
               {...field}
-              id="nic"
-              placeholder="200225702623"
+              id="Email"
+              placeholder="example@gmail.com"
               className="h-12"
             />
           )}
         />
-        {errors.nic && (
-          <p className="text-sm text-red-600">{errors.nic.message}</p>
+        {errors.email && (
+          <p className="text-sm text-red-600">{errors.email.message}</p>
         )}
       </div>
 
@@ -71,7 +75,13 @@ export function LoginForm() {
           name="password"
           control={control}
           render={({ field }) => (
-            <Input {...field} id="password" type="password" className="h-12" />
+            <Input
+              {...field}
+              id="password"
+              type="password"
+              placeholder="XXXXXX"
+              className="h-12"
+            />
           )}
         />
         {errors.password && (
@@ -82,9 +92,9 @@ export function LoginForm() {
       <Button
         type="submit"
         className="w-full h-12 bg-black text-white hover:bg-gray-800"
-        disabled={isLoading}
+        disabled={isSubmitting}
       >
-        {isLoading ? "Signing in..." : "Login"}
+        {isSubmitting ? "Signing in..." : "Login"}
       </Button>
 
       <div className="relative">

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local.auth.guard';
 import { Public } from './decorators/public.decorator';
 import { SignInDto } from './dto/sign-in.dto';
+import { OnboardingDto } from './dto/onboarding.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -29,6 +31,14 @@ export class AuthController {
   async signIn(@Body() signInDto: SignInDto, @Request() req: any) {
     console.log('hit');
     return await this.authService.signIn(req.user);
+  }
+
+  @Post('complete-onboarding')
+  async completeRegistration(
+    @Query('id') userId: string,
+    @Body() onboardingDto: OnboardingDto,
+  ) {
+    return await this.authService.completeOnboarding(userId, onboardingDto);
   }
 
   @Public()

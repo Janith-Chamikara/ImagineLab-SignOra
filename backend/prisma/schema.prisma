@@ -9,21 +9,23 @@ datasource db {
 
 // User Management
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  password    String
-  firstName   String
-  lastName    String
-  phoneNumber String?
-  nationalId  String   @unique
-  dateOfBirth DateTime
-  address     String?
-  city        String?
-  province    String?
-  postalCode  String?
-  isVerified  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  password              String
+  firstName             String?
+  lastName              String?
+  phoneNumber           String?
+  nationalId            String?   @unique
+  dateOfBirth           DateTime?
+  address               String?
+  city                  String?
+  gnDivision            String?
+  divisionalSecretariat String?
+  province              String?
+  postalCode            String?
+  isVerified            Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   // Relationships
   appointments  Appointment[]

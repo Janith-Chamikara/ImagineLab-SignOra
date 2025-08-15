@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -21,6 +22,7 @@ import {
   NotificationChannel,
   NotificationType,
 } from 'src/notifications/dto/create-notification.dto';
+import { OnboardingDto } from './dto/onboarding.dto';
 
 @Injectable()
 export class AuthService {
@@ -32,20 +34,18 @@ export class AuthService {
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
-    const { password, email, nationalId } = signUpDto;
+    const { password, email } = signUpDto;
     const hashedPassword = await getHashedPassword(password);
     if (!hashedPassword) {
       throw new BadRequestException('Cannot hash the given password');
     }
     const isUserExists = await this.prismaService.user.findFirst({
       where: {
-        OR: [{ email: email }, { nationalId: nationalId }],
+        email: email,
       },
     });
     if (isUserExists) {
-      throw new ConflictException(
-        'The email, nationalId is already registered.',
-      );
+      throw new ConflictException('The email is already registered.');
     }
     const user = await this.prismaService.user.create({
       data: { ...signUpDto, password: hashedPassword },
@@ -53,8 +53,8 @@ export class AuthService {
     if (user) {
       await this.notificationsService.create({
         userId: user.id,
-        title: `Welcome to GovTech, ${user.firstName}`,
-        message: `Thank you for signing up. You can now start exploring features.`,
+        title: `Welcome to SignOra`,
+        message: `Thank you for signing up. Please complete the onboarding form to get started.`,
         type: NotificationType.SYSTEM_ALERT,
         channel: NotificationChannel.IN_APP,
       });
@@ -101,6 +101,46 @@ export class AuthService {
       return result;
     }
     return null;
+  }
+
+  async completeOnboarding(userId: string, onboardingDto: OnboardingDto) {
+    const isUserExists = this.prismaService.user.findFirst({
+      where: {
+        id: userId,
+      },
+    });
+    if (!isUserExists) {
+      throw new NotFoundException('Invalid user id. Please register again');
+    }
+    const isNationalIdExists = await this.prismaService.user.findFirst({
+      where: {
+        nationalId: onboardingDto.nationalId,
+      },
+    });
+    if (isNationalIdExists) {
+      throw new ConflictException(
+        'The provided national Id number is already in use',
+      );
+    }
+    const updatedUser = await this.prismaService.user.update({
+      where: {
+        id: userId,
+      },
+      data: onboardingDto,
+    });
+    if (updatedUser) {
+      await this.notificationsService.create({
+        userId: userId,
+        title: `Completed Sign up`,
+        message: `You have successfully completed onboarding process. You can start explore our features now`,
+        type: NotificationType.SYSTEM_ALERT,
+        channel: NotificationChannel.IN_APP,
+      });
+    }
+    return {
+      updatedUser,
+      message: `You have completed your registration ${updatedUser.firstName}.`,
+    };
   }
 
   generateRefreshToken(payload: Omit<User, 'password'>) {

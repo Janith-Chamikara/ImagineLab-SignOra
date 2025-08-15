@@ -2,7 +2,7 @@ import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 
 export default function OnboardingPage() {
   return (
-    <main className="flex-1 flex items-center justify-center py-12 px-4 bg-gray-50">
+    <main className="flex-1 flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-2xl mx-auto">
         <div className="bg-white rounded-lg border shadow-sm p-8">
           <div className="mb-8">
