@@ -36,6 +36,124 @@ export const onboardingSchema = z.object({
   nationalId: z.string().min(1, "Please provide your national id number"),
 });
 
+export const bookingSchema = z.object({
+  serviceId: z.string().min(1, "Please select a service"),
+  timeSlotId: z.string().min(1, "Please select a time slot"),
+  appointmentDate: z.string().min(1, "Please select an appointment date"),
+  notes: z.string().optional(),
+  requiredDocuments: z
+    .array(z.string())
+    .min(1, "Please select at least one required document"),
+});
+
+export const departmentSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Department name is required")
+    .max(100, "Name must be less than 100 characters"),
+  code: z
+    .string()
+    .min(1, "Department code is required")
+    .max(10, "Code must be less than 10 characters")
+    .regex(
+      /^[A-Z0-9_]+$/,
+      "Code must contain only uppercase letters, numbers, and underscores"
+    ),
+  description: z.string().optional(),
+  address: z.string().optional(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^[+]?[0-9\s\-()]+$/.test(val),
+      "Please enter a valid phone number"
+    ),
+  email: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || z.string().email().safeParse(val).success,
+      "Please enter a valid email address"
+    ),
+  workingHours: z
+    .object({
+      monday: z
+        .object({
+          isOpen: z.boolean(),
+          openTime: z.string(),
+          closeTime: z.string(),
+        })
+        .optional(),
+      tuesday: z
+        .object({
+          isOpen: z.boolean(),
+          openTime: z.string(),
+          closeTime: z.string(),
+        })
+        .optional(),
+      wednesday: z
+        .object({
+          isOpen: z.boolean(),
+          openTime: z.string(),
+          closeTime: z.string(),
+        })
+        .optional(),
+      thursday: z
+        .object({
+          isOpen: z.boolean(),
+          openTime: z.string(),
+          closeTime: z.string(),
+        })
+        .optional(),
+      friday: z
+        .object({
+          isOpen: z.boolean(),
+          openTime: z.string(),
+          closeTime: z.string(),
+        })
+        .optional(),
+      saturday: z
+        .object({
+          isOpen: z.boolean(),
+          openTime: z.string(),
+          closeTime: z.string(),
+        })
+        .optional(),
+      sunday: z
+        .object({
+          isOpen: z.boolean(),
+          openTime: z.string(),
+          closeTime: z.string(),
+        })
+        .optional(),
+    })
+    .optional(),
+  isActive: z.boolean(),
+});
+
+export const createServiceSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Service name is required")
+    .max(100, "Name must be less than 100 characters"),
+  code: z
+    .string()
+    .min(1, "Service code is required")
+    .max(20, "Code must be less than 20 characters"),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(500, "Description must be less than 500 characters"),
+  departmentId: z.string().min(1, "Department is required"),
+  estimatedTime: z
+    .number()
+    .min(1, "Estimated time must be at least 1 minute")
+    .max(1440, "Cannot exceed 24 hours"),
+  requiredDocuments: z.array(z.string()).optional(),
+  fee: z.number().min(0, "Fee cannot be negative"),
+  isActive: z.boolean(),
+});
+
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type OnboardingFormData = z.infer<typeof onboardingSchema>;

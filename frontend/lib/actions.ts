@@ -188,3 +188,131 @@ export async function markAllNotificationsAsRead() {
     throw new Error("Failed to mark all notifications as read");
   }
 }
+
+//department actions
+export async function createDepartment(data: FieldValues) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.post(`/department/create`, data, {
+      headers: {
+        Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+        Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+      },
+    });
+
+    return {
+      notification: response.data,
+      message: response.data.message || "Department created successfully",
+      status: "success",
+    } as Status;
+  } catch (error) {
+    console.error("Error creating department:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+
+export async function getAllDepartments() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.get(`/department/get-all`, {
+      headers: {
+        Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+        Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+      },
+    });
+
+    return {
+      data: response.data,
+      status: "success",
+      message: response.data.message || "Fetched all departments successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error fetching all departments:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+export async function getDepartmentById(id: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.get(
+      `/department/get-info-single?id=${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+          Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+        },
+      }
+    );
+
+    return {
+      data: response.data,
+      status: "success",
+      message: response.data.message || "Fetched department successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error fetching department by ID:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+
+export async function createService(data: FieldValues) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.post(
+      `/department/create-service`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+          Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+        },
+      }
+    );
+
+    return {
+      notification: response.data,
+      message:
+        response.data.message || "Department service created successfully",
+      status: "success",
+    } as Status;
+  } catch (error) {
+    console.error("Error creating department service:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}

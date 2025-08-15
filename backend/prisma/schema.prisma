@@ -131,7 +131,6 @@ enum TimeSlotStatus {
 model Appointment {
   id                 String            @id @default(uuid())
   bookingReference   String            @unique
-  qrCode             String            @unique
   userId             String
   serviceId          String
   timeSlotId         String
