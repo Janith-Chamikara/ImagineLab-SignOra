@@ -1,0 +1,42 @@
+services:
+  backend:
+    build: ./backend
+    container_name: govtech-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=file:/data/dev.db
+      - JWT_SECRET=45ac78fa5c459c2c456a7390b26a8c0b
+      - ACCESS_TOKEN_VALIDITY_DURATION_IN_SEC=100
+      - REFRESH_TOKEN_SECRET=45ac78fa5c459c2c456a7390b26a8c0b
+      - ACCESS_TOKEN_SECRET=45ac78fa5c459c2c456a7390b26a8c0b
+      - REFRESH_TOKEN_VALIDITY_DURATION_IN_SEC=432000
+      - CLOUDINARY_CLOUD_NAME=dgkrcxt3p
+      - CLOUDINARY_API_KEY=768998232622312
+      - CLOUDINARY_API_SECRET=gnR7DwE0EVeQ121DhbiN9wE8sWA
+      - CLOUDINARY_FOLDER=govTech
+    ports:
+      - "3001:3001"
+    volumes:
+      - sqlite-data:/data
+    depends_on: []
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: govtech-frontend
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:3001/be
+      - NEXTAUTH_SECRET=45ac78fa5c459c2c456a7390b26a8c0b
+      - NEXTAUTH_URL=http://localhost:3000
+      - FRONTEND_URL=http://localhost:3000
+      - NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dgkrcxt3p
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  sqlite-data:
