@@ -16,7 +16,9 @@ declare module "next-auth" {
       province?: string;
       postalCode?: string;
       isVerified: boolean;
-      isVerified: boolean;
+      role: string;
+      employeeId?: string;
+      departmentId?: string;
       createdAt: Date;
     };
     tokenInfo: {
@@ -44,7 +46,9 @@ declare module "next-auth/jwt" {
       city?: string;
       province?: string;
       postalCode?: string;
-      isVerified: boolean;
+      role: string;
+      employeeId?: string;
+      departmentId?: string;
       isVerified: boolean;
       createdAt: Date;
     };

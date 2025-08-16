@@ -85,21 +85,39 @@ export class AuthService {
         email: email,
       },
     });
-    if (!isUserExists) {
+
+    const isOfficerExists = await this.prismaService.officer.findUnique({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!isUserExists && !isOfficerExists) {
       throw new BadRequestException('Invalid email.');
     }
+
+    const targetEntity = isUserExists || isOfficerExists;
     const isPasswordCorrect = await comparePassword(
       password,
-      isUserExists.password,
+      targetEntity.password,
     );
+
     if (!isPasswordCorrect) {
       throw new UnauthorizedException('Invalid password');
     }
+
     if (isUserExists && isPasswordCorrect) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...result } = isUserExists;
-      return result;
+      const { password: _, ...result } = isUserExists;
+      return { ...result, role: 'USER' };
     }
+
+    if (isOfficerExists && isPasswordCorrect) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...result } = isOfficerExists;
+      return { ...result, role: 'OFFICER' };
+    }
+
     return null;
   }
 

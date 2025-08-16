@@ -49,9 +49,11 @@ export function SiteHeader({ showAuthButtons = true }: SiteHeaderProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-            Dashboard
-          </DropdownMenuItem>
+          {session && (
+            <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+              Dashboard
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem>Support</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

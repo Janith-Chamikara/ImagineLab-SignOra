@@ -1,5 +1,4 @@
 import { IsDefined, IsNotEmpty, IsEmail, MinLength } from 'class-validator';
-
 export class SignUpDto {
   @IsDefined()
   @IsNotEmpty()

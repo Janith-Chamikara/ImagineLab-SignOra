@@ -12,6 +12,7 @@ model User {
   id                    String    @id @default(uuid())
   email                 String    @unique
   password              String
+  role                  Role      @default(USER)
   firstName             String?
   lastName              String?
   phoneNumber           String?
@@ -36,17 +37,17 @@ model User {
 
 // Government Officer/Admin Management
 model Officer {
-  id           String      @id @default(uuid())
-  email        String      @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
   password     String
   firstName    String
   lastName     String
-  employeeId   String      @unique
-  role         OfficerRole @default(OFFICER)
+  employeeId   String   @unique
+  role         Role     @default(OFFICER)
   departmentId String
-  isActive     Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
   department          Department     @relation(fields: [departmentId], references: [id])
@@ -55,10 +56,10 @@ model Officer {
   processedDocuments  Document[]     @relation("ProcessedByOfficer")
 }
 
-enum OfficerRole {
+enum Role {
   ADMIN
-  MANAGER
   OFFICER
+  USER
 }
 
 // Government Departments
@@ -104,9 +105,9 @@ model Service {
 model TimeSlot {
   id              String         @id @default(uuid())
   departmentId    String
-  date            DateTime
-  startTime       DateTime
-  endTime         DateTime
+  date            String
+  startTime       String
+  endTime         String
   maxBookings     Int            @default(1)
   currentBookings Int            @default(0)
   status          TimeSlotStatus @default(AVAILABLE)
@@ -130,8 +131,6 @@ enum TimeSlotStatus {
 // Appointment Booking System
 model Appointment {
   id                 String            @id @default(uuid())
-  bookingReference   String            @unique
-  qrCode             String            @unique
   userId             String
   serviceId          String
   timeSlotId         String
@@ -139,7 +138,7 @@ model Appointment {
   status             AppointmentStatus @default(PENDING)
   notes              String?
   checklistCompleted Json? // Checklist of required documents
-  appointmentDate    DateTime
+  appointmentDate    String
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   completedAt        DateTime?
