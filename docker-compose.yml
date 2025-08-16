@@ -28,6 +28,7 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:3001/be
+      - BACKEND_INTERNAL_URL=http://backend:3001/be
       - NEXTAUTH_SECRET=45ac78fa5c459c2c456a7390b26a8c0b
       - NEXTAUTH_URL=http://localhost:3000
       - FRONTEND_URL=http://localhost:3000
