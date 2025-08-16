@@ -1,51 +1,90 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
-import { TrendingUp } from "lucide-react"
-
-const data = [
-  { month: "Jan", documents: 2 },
-  { month: "Feb", documents: 5 },
-  { month: "Mar", documents: 2 },
-  { month: "Apr", documents: 3 },
-  { month: "May", documents: 5 },
-  { month: "Jun", documents: 3 },
-  { month: "Jul", documents: 3 },
-  { month: "Aug", documents: 4 },
-  { month: "Sep", documents: 3 },
-  { month: "Oct", documents: 2 },
-  { month: "Nov", documents: 4 },
-  { month: "Dec", documents: 3 },
-]
+import { useQuery } from "@tanstack/react-query";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { getUserAppointments } from "@/lib/actions";
+import { Appointment } from "@/lib/types";
 
 export function OverviewChart() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["appointments"],
+    queryFn: getUserAppointments,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const appointments = (data?.data as Appointment[]) || [];
+
+  // Group appointments by month
+  const monthlyData = appointments.reduce((acc, appointment) => {
+    const date = new Date(appointment.appointmentDate);
+    const monthKey = date.toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+
+    if (!acc[monthKey]) {
+      acc[monthKey] = { month: monthKey, appointments: 0 };
+    }
+    acc[monthKey].appointments += 1;
+    return acc;
+  }, {} as Record<string, { month: string; appointments: number }>);
+
+  const chartData = Object.values(monthlyData);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Appointments Overview</CardTitle>
+          <CardDescription>Loading chart data...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] flex items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="bg-white">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold">Overview</CardTitle>
-        <TrendingUp className="w-5 h-5 text-gray-500" />
+    <Card>
+      <CardHeader>
+        <CardTitle>Appointments Overview</CardTitle>
+        <CardDescription>Monthly appointment distribution</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
+        <ChartContainer
+          config={{
+            appointments: {
+              label: "Appointments",
+              color: "hsl(var(--chart-1))",
+            },
+          }}
+          className="h-[300px]"
+        >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#6B7280" }} />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#6B7280" }}
-                domain={[0, 6]}
-                ticks={[0, 2, 4, 6]}
-              />
-              <Bar dataKey="documents" fill="#000000" radius={[2, 2, 0, 0]} />
+            <BarChart data={chartData}>
+              <XAxis dataKey="month" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="appointments" />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">Documents</p>
-        </div>
+        </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -6,6 +6,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { CreateServiceDto } from './dto/create-service.dto';
+import { TimeSlotStatus } from '@prisma/client';
 
 @Injectable()
 export class DepartmentService {
@@ -31,19 +32,81 @@ export class DepartmentService {
     const existingDepartment = await this.prismaService.department.findUnique({
       where: { name: departmentData.name },
     });
+
     if (existingDepartment) {
       throw new ConflictException('Department name already exists');
     }
-    return await this.prismaService.department.create({
+
+    // Parse working hours from departmentData
+    const workingHours = departmentData.workingHours
+      ? JSON.parse(departmentData.workingHours)
+      : null;
+
+    // Create the department
+    const department = await this.prismaService.department.create({
       data: {
         ...departmentData,
-        workingHours: departmentData.workingHours
-          ? JSON.parse(departmentData.workingHours)
-          : null,
+        workingHours: workingHours,
       },
     });
+
+    // Now, create time slots based on working hours
+    if (workingHours) {
+      for (const day in workingHours) {
+        const daySchedule = workingHours[day];
+        if (daySchedule.isOpen) {
+          // Convert open and close times to string format (e.g., "08:00")
+          const openTime = daySchedule.openTime;
+          const closeTime = daySchedule.closeTime;
+
+          // Generate time slots for the department between open and close times
+          let currentStartTime = openTime;
+          while (
+            this.timeToMinutes(currentStartTime) < this.timeToMinutes(closeTime)
+          ) {
+            // Calculate the next time slot (1-hour duration)
+            const currentEndTime = this.addOneHour(currentStartTime);
+
+            // Format the time slot as a string (e.g., "08:00 - 09:00")
+            const timeSlotString = `${currentStartTime} - ${currentEndTime}`;
+
+            // Create the time slot for the day
+            await this.prismaService.timeSlot.create({
+              data: {
+                departmentId: department.id,
+                date: day, // Store the day name (e.g., "monday")
+                startTime: timeSlotString.split(' - ')[0], // Store start time as a string
+                endTime: timeSlotString.split(' - ')[1], // Store end time as a string
+                maxBookings: 1, // Adjust as needed
+                currentBookings: 0,
+                status: TimeSlotStatus.AVAILABLE,
+              },
+            });
+
+            // Move to the next hour
+            currentStartTime = currentEndTime;
+          }
+        }
+      }
+    }
+
+    return department;
   }
 
+  // Helper function to convert time string to minutes for comparison
+  private timeToMinutes(time: string): number {
+    const [hours, minutes] = time.split(':').map((str) => parseInt(str, 10));
+    return hours * 60 + minutes;
+  }
+
+  // Helper function to add one hour to a time string
+  private addOneHour(time: string): string {
+    // eslint-disable-next-line prefer-const
+    let [hours, minutes] = time.split(':').map((str) => parseInt(str, 10));
+    hours += 1; // Add one hour
+    if (hours === 24) hours = 0; // Handle 24-hour rollover if needed
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  }
   async updateDepartment(
     departmentId: string,
     departmentData: CreateDepartmentDto,

@@ -3,13 +3,16 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "firstName" TEXT NOT NULL,
-    "lastName" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'USER',
+    "firstName" TEXT,
+    "lastName" TEXT,
     "phoneNumber" TEXT,
-    "nationalId" TEXT NOT NULL,
-    "dateOfBirth" DATETIME NOT NULL,
+    "nationalId" TEXT,
+    "dateOfBirth" DATETIME,
     "address" TEXT,
     "city" TEXT,
+    "gnDivision" TEXT,
+    "divisionalSecretariat" TEXT,
     "province" TEXT,
     "postalCode" TEXT,
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
@@ -68,9 +71,9 @@ CREATE TABLE "Service" (
 CREATE TABLE "TimeSlot" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "departmentId" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
-    "startTime" DATETIME NOT NULL,
-    "endTime" DATETIME NOT NULL,
+    "date" TEXT NOT NULL,
+    "startTime" TEXT NOT NULL,
+    "endTime" TEXT NOT NULL,
     "maxBookings" INTEGER NOT NULL DEFAULT 1,
     "currentBookings" INTEGER NOT NULL DEFAULT 0,
     "status" TEXT NOT NULL DEFAULT 'AVAILABLE',
@@ -82,8 +85,6 @@ CREATE TABLE "TimeSlot" (
 -- CreateTable
 CREATE TABLE "Appointment" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "bookingReference" TEXT NOT NULL,
-    "qrCode" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "serviceId" TEXT NOT NULL,
     "timeSlotId" TEXT NOT NULL,
@@ -91,7 +92,7 @@ CREATE TABLE "Appointment" (
     "status" TEXT NOT NULL DEFAULT 'PENDING',
     "notes" TEXT,
     "checklistCompleted" JSONB,
-    "appointmentDate" DATETIME NOT NULL,
+    "appointmentDate" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     "completedAt" DATETIME,
@@ -212,12 +213,6 @@ CREATE UNIQUE INDEX "Service_code_key" ON "Service"("code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "TimeSlot_departmentId_date_startTime_key" ON "TimeSlot"("departmentId", "date", "startTime");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Appointment_bookingReference_key" ON "Appointment"("bookingReference");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Appointment_qrCode_key" ON "Appointment"("qrCode");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Feedback_appointmentId_key" ON "Feedback"("appointmentId");

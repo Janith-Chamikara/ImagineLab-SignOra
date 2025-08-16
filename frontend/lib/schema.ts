@@ -37,13 +37,14 @@ export const onboardingSchema = z.object({
 });
 
 export const bookingSchema = z.object({
-  serviceId: z.string().min(1, "Please select a service"),
-  timeSlotId: z.string().min(1, "Please select a time slot"),
-  appointmentDate: z.string().min(1, "Please select an appointment date"),
+  serviceId: z.string().min(1, "Service is required"),
+  timeSlotId: z.string().min(1, "Time slot is required"),
+  appointmentDate: z.string().min(1, "Appointment date is required"),
   notes: z.string().optional(),
   requiredDocuments: z
     .array(z.string())
-    .min(1, "Please select at least one required document"),
+    .min(1, "At least one document is required"),
+  documentFiles: z.record(z.instanceof(File)).optional(), // Maps document type to file
 });
 
 export const departmentSchema = z.object({
@@ -152,6 +153,13 @@ export const createServiceSchema = z.object({
   requiredDocuments: z.array(z.string()).optional(),
   fee: z.number().min(0, "Fee cannot be negative"),
   isActive: z.boolean(),
+});
+
+export const feedbackSchema = z.object({
+  appointmentId: z.string().uuid(),
+  rating: z.number().int().min(1, "Please provide a rating").max(5),
+  comment: z.string().optional(),
+  isAnonymous: z.boolean().optional(),
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;

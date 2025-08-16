@@ -16,10 +16,12 @@ import { getDepartmentById } from "@/lib/actions";
 import { Department, Service } from "@/lib/types";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function ServicesPage() {
+  const { data: session } = useSession();
   const { id } = useParams();
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["department", id],
@@ -40,7 +42,7 @@ export default function ServicesPage() {
         <div>
           <div className="mb-6">
             <Button
-              onClick={() => router.push("/departments")}
+              onClick={() => router.push("/dashboard/departments")}
               variant="outline"
               className="mb-4"
             >
@@ -53,7 +55,9 @@ export default function ServicesPage() {
                 </h1>
                 <p className="text-gray-600">{department.description}</p>
               </div>
-              <CreateServiceModal refetch={refetch} />
+              {session?.user.role === "ADMIN" && (
+                <CreateServiceModal refetch={refetch} />
+              )}
             </div>
           </div>
 
@@ -140,8 +144,12 @@ export default function ServicesPage() {
                             </div>
                           </div>
                         )}
-
-                      <ServiceBookingModal service={service} />
+                      {session?.user.role === "OFFICER" && (
+                        <Button onClick={() => {}}>Approve booking</Button>
+                      )}
+                      {session?.user.role === "USER" && (
+                        <ServiceBookingModal service={service} />
+                      )}
                     </CardContent>
                   </Card>
                 ))}

@@ -2,7 +2,7 @@
 import { FieldValues } from "react-hook-form";
 import { axiosPublic } from "./axios";
 import { isAxiosError } from "axios";
-import { Status } from "./types";
+import { AppointmentStatus, Status } from "./types";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth-options";
 
@@ -308,6 +308,279 @@ export async function createService(data: FieldValues) {
     } as Status;
   } catch (error) {
     console.error("Error creating department service:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+
+//timeslot actions
+export async function getAvailableTimeSlots(
+  departmentId: string,
+  date: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.get(
+      `/timeslot/available?departmentId=${departmentId}&date=${date}`,
+      {
+        headers: {
+          Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+          Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+        },
+      }
+    );
+
+    return {
+      data: response.data,
+      status: "success",
+      message:
+        response.data.message || "Fetched available time slots successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error fetching available time slots:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+
+export async function bookTimeSlot(
+  timeSlotId: string,
+  departmentId: string,
+  userId: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.put(
+      `/timeslot/book`,
+      { timeSlotId, departmentId, userId },
+      {
+        headers: {
+          Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+          Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+        },
+      }
+    );
+
+    return {
+      data: response.data,
+      status: "success",
+      message: response.data.message || "Time slot booked successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error booking time slot:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+
+//appointment actions
+export async function createAppointment(formData: FormData) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+    const response = await axiosPublic.post(`/appointment/create`, formData, {
+      headers: {
+        Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+        Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+      },
+    });
+    return {
+      data: response.data,
+      status: "success",
+      message: response.data.message || "Time slot booked successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error creating appointment:", error);
+
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+
+export async function getUserAppointments() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const url =
+      session.user.role === "OFFICER"
+        ? `/appointment/get-all-for-officer?departmentId=${session.user.departmentId}` // Officers can see all appointments
+        : `/appointment/get-all?userId=${session.user.id}`; // Regular users see only their appointments
+
+    const response = await axiosPublic.get(url, {
+      headers: {
+        Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+        Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+      },
+    });
+
+    console.log("API Response:", response.data);
+    return {
+      data: response.data,
+      status: "success",
+      message: "Fetched appointments successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+    return {
+      status: "error",
+      message: "Failed to fetch appointments",
+    } as Status;
+  }
+}
+export async function getAppointmentById(appointmentId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.get(
+      `/appointment/get-single?appointmentId=${appointmentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+          Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+        },
+      }
+    );
+
+    console.log("API Response:", response.data);
+    return {
+      data: response.data,
+      status: "success",
+      message: "Fetched appointment successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error fetching appointment:", error);
+    return {
+      status: "error",
+      message: "Failed to fetch appointment",
+    } as Status;
+  }
+}
+
+export async function updateAppointment(
+  appointmentId: string,
+
+  status: AppointmentStatus
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.put(
+      `/appointment/update-status?appointmentId=${appointmentId}&status=${status}&officerId=${session.user.id}&`,
+      {
+        headers: {
+          Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+          Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+        },
+      }
+    );
+
+    console.log("API Response:", response.data);
+    return {
+      data: response.data,
+      status: "success",
+      message: "Updated appointment successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error updating appointment:", error);
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message:
+          error?.response?.data.message || "Failed to update appointment",
+      } as Status;
+    }
+  }
+}
+
+//feedback actions
+export async function submitFeedback(data: FieldValues) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+    const response = await axiosPublic.post(`/feedback/create`, data, {
+      headers: {
+        Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+        Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+      },
+    });
+    return {
+      data: response.data,
+      status: "success",
+      message: response.data.message || "Feedback submitted successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error creating feedback:", error);
+
+    if (isAxiosError(error)) {
+      return {
+        status: "error",
+        message: error.response?.data.message,
+      } as Status;
+    }
+  }
+}
+export async function getFeedbacksByAppointmentId(appointmentId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const response = await axiosPublic.get(
+      `/feedback/by-appointment-id?appointmentId=${appointmentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${session?.tokenInfo.accessToken}`,
+          Cookie: `refreshToken=${session?.tokenInfo.refreshToken}`,
+        },
+      }
+    );
+    console.log("API Response:", response.data);
+
+    return {
+      data: response.data,
+      status: "success",
+      message: response.data.message || "Fetched feedbacks successfully",
+    } as Status;
+  } catch (error) {
+    console.error("Error fetching feedbacks:", error);
     if (isAxiosError(error)) {
       return {
         status: "error",

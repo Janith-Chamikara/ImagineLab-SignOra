@@ -1,14 +1,11 @@
 "use client";
 
-import type React from "react";
-
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -30,54 +27,28 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Clock, CreditCard } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  CalendarIcon,
+  Clock,
+  CreditCard,
+  Upload,
+  X,
+  FileText,
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { bookingSchema } from "@/lib/schema";
-import type {
-  BookingFormData,
-  Department,
-  Service,
-  TimeSlot,
-} from "@/lib/types";
+import type { BookingFormData, Service, TimeSlot } from "@/lib/types";
 import { SpinnerLoader } from "@/components/loader";
+import { useQuery } from "@tanstack/react-query";
+import { getAvailableTimeSlots, createAppointment } from "@/lib/actions";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 type ServiceBookingModalProps = {
   service: Service;
 };
-
-const mockTimeSlots: TimeSlot[] = [
-  {
-    id: "ts1",
-    departmentId: "1",
-    date: new Date(),
-    startTime: new Date("2024-01-15T09:00:00"),
-    endTime: new Date("2024-01-15T09:30:00"),
-    maxBookings: 1,
-    currentBookings: 0,
-    status: "AVAILABLE",
-  },
-  {
-    id: "ts2",
-    departmentId: "1",
-    date: new Date(),
-    startTime: new Date("2024-01-15T10:00:00"),
-    endTime: new Date("2024-01-15T10:30:00"),
-    maxBookings: 1,
-    currentBookings: 0,
-    status: "AVAILABLE",
-  },
-  {
-    id: "ts3",
-    departmentId: "1",
-    date: new Date(),
-    startTime: new Date("2024-01-15T11:00:00"),
-    endTime: new Date("2024-01-15T11:30:00"),
-    maxBookings: 1,
-    currentBookings: 1,
-    status: "FULL",
-  },
-];
 
 const documentTypes = [
   { value: "NATIONAL_ID", label: "National ID" },
@@ -95,6 +66,7 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
 
   const {
     control,
@@ -111,15 +83,49 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
       appointmentDate: "",
       notes: "",
       requiredDocuments: [],
+      documentFiles: {},
     },
   });
-
+  const { data: session } = useSession();
   const watchedDocuments = watch("requiredDocuments");
 
   const onSubmit = async (data: BookingFormData) => {
     setIsSubmitting(true);
     try {
+      const formData = new FormData();
+
+      // Add basic appointment data
+      formData.append("userId", session?.user.id as string);
+      formData.append("serviceId", data.serviceId);
+      formData.append("timeSlotId", data.timeSlotId);
+      formData.append(
+        "appointmentDate",
+        new Date(data.appointmentDate).toISOString()
+      );
+      formData.append("status", "PENDING");
+      formData.append("notes", data.notes || "");
+      formData.append(
+        "checklistCompleted",
+        JSON.stringify(data.requiredDocuments)
+      );
+      formData.append("documentTypes", JSON.stringify(data.requiredDocuments));
+
+      Object.entries(uploadedFiles).forEach(([docType, file]) => {
+        formData.append("documents", file);
+      });
+
+      const response = await createAppointment(formData);
+
+      if (response) {
+        if (response.status === "success") {
+          toast.success("Appointment created successfully!");
+        } else {
+          toast.error("Failed to create appointment");
+        }
+      }
+
       reset();
+      setUploadedFiles({});
       setOpen(false);
     } catch (error) {
       console.error("Booking failed:", error);
@@ -128,22 +134,54 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
     }
   };
 
+  const handleFileUpload = (docType: string, file: File | null) => {
+    if (file) {
+      setUploadedFiles((prev) => ({ ...prev, [docType]: file }));
+      setValue("documentFiles", { ...uploadedFiles, [docType]: file });
+    } else {
+      const newFiles = { ...uploadedFiles };
+      delete newFiles[docType];
+      setUploadedFiles(newFiles);
+      setValue("documentFiles", newFiles);
+    }
+  };
+
+  const selectedWeekday = selectedDate
+    ? format(selectedDate, "EEEE").toLowerCase()
+    : undefined;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["timeSlots", service.departmentId, selectedWeekday],
+    queryFn: async () => {
+      const response = await getAvailableTimeSlots(
+        service.departmentId,
+        selectedWeekday as string
+      );
+      return response;
+    },
+    enabled: !!selectedWeekday,
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
+  });
+
+  const timeSlots = (data?.data as TimeSlot[]) || [];
+  const filteredTimeSlots = timeSlots.filter(
+    (slot) => slot.status === "AVAILABLE"
+  );
+
   const handleClose = () => {
     reset();
     setSelectedDate(undefined);
+    setUploadedFiles({});
     setOpen(false);
   };
-
-  const availableTimeSlots = mockTimeSlots.filter(
-    (slot) => slot.status === "AVAILABLE"
-  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>Book Service</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Book Service: {service.name}</DialogTitle>
         </DialogHeader>
@@ -216,19 +254,38 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
           {/* Time Slot Selection */}
           <div className="space-y-2">
             <Label>Available Time Slots *</Label>
+            {isLoading && selectedDate && <SpinnerLoader />}
             <Controller
               name="timeSlotId"
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a time slot" />
+                    <SelectValue
+                      placeholder={
+                        !selectedDate
+                          ? "Please select a date first"
+                          : isLoading
+                          ? "Loading available slots..."
+                          : filteredTimeSlots.length === 0
+                          ? "No available slots for selected date"
+                          : "Select a time slot"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableTimeSlots.map((slot) => (
-                      <SelectItem key={slot.id} value={slot.id}>
-                        {format(slot.startTime, "HH:mm")} -{" "}
-                        {format(slot.endTime, "HH:mm")}
+                    {filteredTimeSlots.map((slot) => (
+                      <SelectItem
+                        key={slot.id}
+                        value={slot.id}
+                        disabled={slot.currentBookings >= slot.maxBookings}
+                      >
+                        {slot.startTime} - {slot.endTime}
+                        {slot.currentBookings >= slot.maxBookings && " (Full)"}
+                        {slot.currentBookings < slot.maxBookings &&
+                          ` (${
+                            slot.maxBookings - slot.currentBookings
+                          } spots left)`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -238,6 +295,17 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
             {errors.timeSlotId && (
               <p className="text-sm text-red-600">
                 {errors.timeSlotId.message}
+              </p>
+            )}
+            {!selectedDate && (
+              <p className="text-sm text-gray-500">
+                Please select a date to view available time slots
+              </p>
+            )}
+            {selectedDate && !isLoading && filteredTimeSlots.length === 0 && (
+              <p className="text-sm text-orange-600">
+                No available time slots for {format(selectedDate, "EEEE")}.
+                Please select a different date.
               </p>
             )}
           </div>
@@ -270,6 +338,10 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
                               : field.value?.filter((d) => d !== doc.value) ||
                                 [];
                             field.onChange(updatedDocs);
+
+                            if (!checked && uploadedFiles[doc.value]) {
+                              handleFileUpload(doc.value, null);
+                            }
                           }}
                         />
                       )}
@@ -289,6 +361,87 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
               </p>
             )}
           </div>
+
+          {/* Document Upload Section */}
+          {watchedDocuments && watchedDocuments.length > 0 && (
+            <div className="space-y-4">
+              <Label>Upload Documents</Label>
+              <p className="text-sm text-gray-600">
+                Please upload the selected documents:
+              </p>
+              <div className="space-y-3">
+                {watchedDocuments.map((docType) => {
+                  const docLabel =
+                    documentTypes.find((d) => d.value === docType)?.label ||
+                    docType;
+                  const uploadedFile = uploadedFiles[docType];
+
+                  return (
+                    <div
+                      key={docType}
+                      className="border rounded-lg p-4 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">
+                          {docLabel}
+                        </Label>
+                        {uploadedFile && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleFileUpload(docType, null)}
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {uploadedFile ? (
+                        <div className="flex items-center gap-2 p-2 bg-green-50 rounded border border-green-200">
+                          <FileText className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-green-700 flex-1">
+                            {uploadedFile.name}
+                          </span>
+                          <span className="text-xs text-green-600">
+                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                          <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <Label
+                            htmlFor={`file-${docType}`}
+                            className="cursor-pointer"
+                          >
+                            <span className="text-sm w-full mx-auto text-gray-600">
+                              Click to upload or drag and drop
+                            </span>
+                            <Input
+                              id={`file-${docType}`}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleFileUpload(docType, file);
+                                }
+                              }}
+                            />
+                          </Label>
+                          <p className="text-xs text-gray-500 mt-1">
+                            PDF, JPG, PNG, DOC, DOCX (Max 10MB)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Additional Notes */}
           <div className="space-y-2">
@@ -321,10 +474,10 @@ export function ServiceBookingModal({ service }: ServiceBookingModalProps) {
               {isSubmitting ? (
                 <>
                   <SpinnerLoader size="sm" className="mr-2" />
-                  Booking...
+                  Creating Appointment...
                 </>
               ) : (
-                "Book Appointment"
+                "Create Appointment"
               )}
             </Button>
           </div>

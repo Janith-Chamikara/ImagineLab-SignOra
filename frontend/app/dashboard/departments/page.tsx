@@ -18,9 +18,11 @@ import { useQuery } from "@tanstack/react-query";
 import { getAllDepartments } from "@/lib/actions";
 import { SpinnerLoader } from "@/components/loader";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function DepartmentsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
 
   const [isCreateDepartmentModalOpen, setIsCreateDepartmentModalOpen] =
     useState(false);
@@ -58,7 +60,9 @@ export default function DepartmentsPage() {
             Select a department to view available services and book appointments
           </p>
         </div>
-        <Button onClick={handleDepartmentCreate}>Create Department</Button>
+        {session?.user.role === "ADMIN" && (
+          <Button onClick={handleDepartmentCreate}>Create Department</Button>
+        )}
         <DepartmentCreationModal
           isOpen={isCreateDepartmentModalOpen}
           onClose={() => setIsCreateDepartmentModalOpen(false)}

@@ -5,14 +5,18 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { id: "overview", label: "Overview", href: "/dashboard" },
-  { id: "documents", label: "My documents", href: "/dashboard/documents" },
-  { id: "departments", label: "Departments", href: "/dashboard/departments" },
   {
-    id: "notifications",
-    label: "Notifications",
-    href: "/dashboard/notifications",
+    id: "Appointments",
+    label: "My appointments",
+    href: "/dashboard/appointments",
   },
-  { id: "settings", label: "Settings", href: "/dashboard/settings" },
+  { id: "departments", label: "Departments", href: "/dashboard/departments" },
+  // {
+  //   id: "notifications",
+  //   label: "Notifications",
+  //   href: "/dashboard/notifications",
+  // },
+  // { id: "settings", label: "Settings", href: "/dashboard/settings" },
 ];
 
 export function DashboardNav() {
